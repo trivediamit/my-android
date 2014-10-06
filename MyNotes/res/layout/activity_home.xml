@@ -1,0 +1,58 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="com.notes.mynotes.HomeActivity" >
+
+    <CheckBox
+        android:id="@+id/checkBox_register"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="36dp"
+        android:text="New User?"
+        android:button="@null"
+        android:drawableRight="?android:attr/listChoiceIndicatorMultiple" 
+        android:onClick="changeTitle"/>
+    
+    <EditText
+        android:inputType="text"
+        android:id="@+id/editText_User"
+        android:hint="Username"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="92dp"
+        android:ems="10" >
+
+        <requestFocus />
+    </EditText>
+
+    <EditText
+       	android:inputType="textPassword"
+        android:id="@+id/editText_Password"
+        android:hint="Password"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/editText_User"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="12dp"
+        android:ems="10" />
+
+    <Button
+        android:id="@+id/button_signIn_or_register"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/editText_Password"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="12dp"
+        android:text="Sign in" 
+        android:onClick="signIn_or_register"/>
+
+
+</RelativeLayout>
