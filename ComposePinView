@@ -1,0 +1,226 @@
+package com.demo.sampleapp
+
+import android.graphics.Color
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun PinRoot(viewModel: PinViewModel = PinViewModel()) {
+    val pin by viewModel.pin.collectAsState()
+    val error by viewModel.errorMessage.collectAsState()
+
+    PinScreen(
+        pin = pin,
+        error = error,
+        onPinDigitChanged = viewModel::onPinDigitChanged,
+        onBackspace = { index ->
+            val previous = (index - 1).coerceAtLeast(0)
+            viewModel.onPinDigitChanged(previous, "")
+        },
+        onRemoveLastDigit = viewModel::removeLastDigit,
+        onSubmitPin = viewModel::submitPin
+    )
+
+
+}
+
+@Composable
+fun PinScreen(
+    pin: List<String>,
+    error: String?,
+    onPinDigitChanged: (index: Int, digit: String) -> Unit,
+    onBackspace: (index: Int) -> Unit,
+    onRemoveLastDigit: () -> Int?,
+    onSubmitPin: () -> Unit,
+    modifier: Modifier = Modifier,
+    pinSpacing: Dp = 8.dp,
+    buttonSpacing: Dp = 16.dp,
+    pinFieldCount: Int = 7
+) {
+    val focusRequesters = remember { List(pinFieldCount) { FocusRequester() } }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    val onBackspaceWithFocus: (Int) -> Unit = { index ->
+        onBackspace(index)
+        val previous = (index - 1).coerceAtLeast(0)
+        focusRequesters.getOrNull(previous)?.requestFocus()
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequesters.firstOrNull()?.requestFocus()
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(pinSpacing)) {
+            pin.forEachIndexed { index, digit ->
+                PinTextField(
+                    index = index,
+                    value = digit,
+                    onValueChange = onPinDigitChanged,
+                    onBackspaceWithFocus = onBackspaceWithFocus,
+                    focusRequester = focusRequesters.getOrNull(index) ?: FocusRequester(),
+                    nextFocusRequester = focusRequesters.getOrNull(index + 1)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(buttonSpacing)) {
+            Button(onClick = {
+                val lastIndex = onRemoveLastDigit()
+                lastIndex?.let {
+                    keyboardController?.show()
+                    focusRequesters.getOrNull(it)?.requestFocus()
+                }
+            }) {
+                Text("Cancel")
+            }
+
+            Button(
+                onClick = onSubmitPin,
+                enabled = pin.all { it.isNotEmpty() }
+            ) {
+                Text("Submit")
+            }
+        }
+
+        error?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+/**
+ * A reusable PIN digit input field with focus management and backspace handling.
+ * @param modifier Modifier for layout/styling customization.
+ * @param index The index of this digit in the PIN sequence.
+ * @param value The digit entered in this field.
+ * @param onValueChange Callback invoked when the digit is updated.
+ * @param onBackspaceWithFocus Callback invoked on backspace when the field is empty.
+ * @param focusRequester FocusRequester tied to this input field.
+ * @param nextFocusRequester FocusRequester for the next input field, if any.
+ * @param fieldSize Size of the PIN field (width and height).
+ * @param underlineColor Color of the underline below the text field.
+ * @param textStyle Text style for the digit.
+ */
+@Composable
+fun PinTextField(
+    modifier: Modifier = Modifier,
+    index: Int,
+    value: String,
+    onValueChange: (Int, String) -> Unit,
+    onBackspaceWithFocus: (Int) -> Unit,
+    focusRequester: FocusRequester,
+    nextFocusRequester: FocusRequester? = null,
+    fieldSize: DpSize = DpSize(48.dp, 56.dp),
+    underlineColor: Int = Color.GRAY, // TODO
+    textStyle: TextStyle = LocalTextStyle.current.copy(
+        textAlign = TextAlign.Center,
+        fontSize = MaterialTheme.typography.headlineSmall.fontSize
+    )
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    BasicTextField(
+        value = value,
+        onValueChange = { input ->
+            val isSingleDigit = input.length <= 1
+            val isNumeric = input.all { char -> char.isDigit() }
+
+            if (isSingleDigit && isNumeric) {
+                onValueChange(index, input)
+
+                val shouldMoveFocus = input.isNotEmpty()
+                if (shouldMoveFocus) {
+                    nextFocusRequester?.requestFocus() ?: keyboardController?.hide()
+                }
+            }
+        },
+        modifier = modifier
+            .size(fieldSize)
+            .focusRequester(focusRequester)
+            .onKeyEvent { event ->
+                if (event.key == Key.Backspace &&
+                    event.type == KeyEventType.KeyUp &&
+                    value.isEmpty()
+                ) {
+                    onBackspaceWithFocus(index)
+                    true
+                } else {
+                    false
+                }
+            },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Next
+        ),
+        textStyle = textStyle,
+        decorationBox = { innerTextField ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.height(40.dp)
+                ) {
+                    innerTextField()
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .height(2.dp)
+                        .fillMaxWidth()
+                        .background(androidx.compose.ui.graphics.Color.Gray)
+                )
+            }
+        }
+    )
+}
