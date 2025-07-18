@@ -1,0 +1,38 @@
+package com.demo.sampleapp
+
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+
+class PinViewModel : ViewModel() {
+    private val _pin = MutableStateFlow(List(7) { "" })
+    val pin: StateFlow<List<String>> = _pin
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    fun onPinDigitChanged(index: Int, digit: String) {
+        _pin.update { current ->
+            current.toMutableList().apply { this[index] = digit }
+        }
+    }
+
+    fun removeLastDigit(): Int? {
+        val lastFilledIndex = _pin.value.indexOfLast { it.isNotEmpty() }
+        if (lastFilledIndex != -1) {
+            onPinDigitChanged(lastFilledIndex, "")
+            return lastFilledIndex
+        }
+        return null
+    }
+
+    fun submitPin() {
+        if (_pin.value.any { it.isEmpty() }) {
+            _errorMessage.value = "Please complete the PIN."
+        } else {
+            _errorMessage.value = null
+            // Process PIN...
+        }
+    }
+}
